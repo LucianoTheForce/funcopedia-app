@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Chat from "./pages/Chat";
+import Chats from "./pages/Chats";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,14 @@ const App = () => (
             }
           />
           <Route
+            path="/chats"
+            element={
+              <ProtectedRoute>
+                <Chats />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/store"
             element={
               <ProtectedRoute>
@@ -74,14 +83,6 @@ const App = () => (
           />
           <Route
             path="/favourites"
-            element={
-              <ProtectedRoute>
-                <Navigate to="/" />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/chats"
             element={
               <ProtectedRoute>
                 <Navigate to="/" />
