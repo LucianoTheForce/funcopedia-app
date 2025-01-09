@@ -4,27 +4,27 @@ import { Avatar, AvatarImage } from "@/components/ui/avatar";
 
 const Index = () => {
   const freshFaces = [
-    { id: 1, name: "Sofia", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
-    { id: 2, name: "Lucas", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
-    { id: 3, name: "Isabella", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
-    { id: 4, name: "Miguel", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
-    { id: 5, name: "Valentina", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
-    { id: 6, name: "João", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
+    { id: 1, name: "Sofia", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sofia" },
+    { id: 2, name: "Lucas", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas" },
+    { id: 3, name: "Isabella", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Isabella" },
+    { id: 4, name: "Miguel", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Miguel" },
+    { id: 5, name: "Valentina", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Valentina" },
+    { id: 6, name: "João", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Joao" },
   ];
 
   const nearbyUsers = [
-    { id: 1, name: "Maria", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 2, name: "Pedro", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 3, name: "Ana", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: false },
-    { id: 4, name: "Gabriel", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 5, name: "Julia", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: false },
-    { id: 6, name: "Rafael", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 7, name: "Beatriz", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 8, name: "Thiago", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: false },
-    { id: 9, name: "Laura", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 10, name: "Bruno", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 11, name: "Carolina", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: false },
-    { id: 12, name: "Diego", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
+    { id: 1, name: "Maria", image: "https://images.unsplash.com/photo-1582562124811-c09040d0a901", online: true },
+    { id: 2, name: "Pedro", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Pedro", online: true },
+    { id: 3, name: "Ana", image: "https://images.unsplash.com/photo-1535268647677-300dbf3d78d1", online: false },
+    { id: 4, name: "Gabriel", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Gabriel", online: true },
+    { id: 5, name: "Julia", image: "https://images.unsplash.com/photo-1452378174528-3090a4bba7b2", online: false },
+    { id: 6, name: "Rafael", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rafael", online: true },
+    { id: 7, name: "Beatriz", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Beatriz", online: true },
+    { id: 8, name: "Thiago", image: "https://images.unsplash.com/photo-1465379944081-7f47de8d74ac", online: false },
+    { id: 9, name: "Laura", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Laura", online: true },
+    { id: 10, name: "Bruno", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bruno", online: true },
+    { id: 11, name: "Carolina", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Carolina", online: false },
+    { id: 12, name: "Diego", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Diego", online: true },
   ];
 
   return (
