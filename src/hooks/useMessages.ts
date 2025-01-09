@@ -32,7 +32,7 @@ export const useMessages = (userId: string | undefined) => {
       const { data, error } = await supabase
         .from("messages")
         .select("*")
-        .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${currentUserId})`)
+        .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
         .order("created_at", { ascending: true });
 
       if (error) {
@@ -91,8 +91,8 @@ export const useMessages = (userId: string | undefined) => {
       console.error("Error in sendMessage:", error);
       toast({
         variant: "destructive",
-          title: "Error",
-          description: "An unexpected error occurred",
+        title: "Error",
+        description: "An unexpected error occurred",
       });
     } finally {
       setIsLoading(false);
