@@ -1,16 +1,25 @@
-import { useParams } from "react-router-dom";
-import { Camera, Send, Type } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Camera, Send, Type, ArrowLeft } from "lucide-react";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 const Chat = () => {
   const { userId } = useParams();
+  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col h-screen bg-black">
       {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b border-gray-800">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => navigate('/')}
+          className="text-white hover:text-orange-500"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
         <Avatar className="w-10 h-10">
           <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`} />
         </Avatar>
