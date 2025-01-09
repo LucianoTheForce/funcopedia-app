@@ -37,31 +37,36 @@ const Chat = () => {
           .from('profiles')
           .select('id, username, avatar_url')
           .eq('username', username)
-          .single();
+          .maybeSingle();
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching receiver profile:', error);
+          throw error;
+        }
         
-        if (data) {
-          setUserId(data.id);
-          setReceiverProfile({
-            username: data.username,
-            avatar_url: data.avatar_url
-          });
-        } else {
+        if (!data) {
           toast({
             title: "Erro",
             description: "Usuário não encontrado",
             variant: "destructive",
           });
-          navigate('/chats');
+          navigate('/chats', { replace: true });
+          return;
         }
-      } catch (error) {
+
+        setUserId(data.id);
+        setReceiverProfile({
+          username: data.username || username,
+          avatar_url: data.avatar_url
+        });
+      } catch (error: any) {
         console.error('Error fetching receiver profile:', error);
         toast({
           title: "Erro",
           description: "Falha ao carregar perfil do usuário",
           variant: "destructive",
         });
+        navigate('/chats', { replace: true });
       }
     };
 

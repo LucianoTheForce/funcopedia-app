@@ -1,45 +1,44 @@
-import { Avatar, AvatarImage } from "@/components/ui/avatar";
-import { formatDate } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
-interface ChatPreviewProps {
+interface Profile {
   id: string;
-  content: string;
-  created_at: string;
-  profile: {
-    username: string;
-    avatar_url: string | null;
-  };
+  username: string | null;
+  avatar_url: string | null;
 }
 
-export const ChatPreview = ({ id, content, created_at, profile }: ChatPreviewProps) => {
+interface ChatPreviewProps {
+  profile: Profile;
+}
+
+export const ChatPreview = ({ profile }: ChatPreviewProps) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    if (profile?.username) {
-      // Navegação direta para o chat usando o username
-      navigate(`/chat/${profile.username}`, { replace: true });
+    if (!profile?.username) {
+      console.error('No username available for navigation');
+      return;
     }
+    navigate(`/chat/${profile.username}`, { replace: true });
   };
 
   return (
-    <div
-      className="flex items-center gap-4 p-4 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors"
+    <Button
+      variant="ghost"
+      className="w-full flex items-center gap-3 p-3 hover:bg-gray-800/50 transition-colors"
       onClick={handleClick}
     >
       <Avatar className="w-12 h-12">
-        <AvatarImage 
-          src={profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`} 
-          alt={profile.username}
+        <AvatarImage
+          src={profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.id}`}
+          alt={profile.username || 'User avatar'}
         />
       </Avatar>
-      <div className="flex-1">
-        <h3 className="font-semibold text-white">{profile.username}</h3>
-        <p className="text-sm text-gray-400">{content}</p>
+      <div className="flex-1 text-left">
+        <h3 className="font-medium text-white">{profile.username || 'Anonymous'}</h3>
+        <p className="text-sm text-gray-400">Click to chat</p>
       </div>
-      <span className="text-xs text-gray-500">
-        {new Date(created_at).toLocaleDateString()}
-      </span>
-    </div>
+    </Button>
   );
 };
