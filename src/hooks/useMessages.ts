@@ -10,6 +10,9 @@ export interface Message {
   created_at: string;
 }
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export const useMessages = (userId: string | undefined) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,10 +32,23 @@ export const useMessages = (userId: string | undefined) => {
         return;
       }
 
+      // Validate UUIDs
+      if (!UUID_REGEX.test(currentUserId) || !UUID_REGEX.test(userId)) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Invalid user ID format",
+        });
+        return;
+      }
+
       const { data, error } = await supabase
         .from("messages")
         .select("*")
-        .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
+        .or(
+          `and(sender_id.eq.${currentUserId},receiver_id.eq.${userId}),` +
+          `and(sender_id.eq.${userId},receiver_id.eq.${currentUserId})`
+        )
         .order("created_at", { ascending: true });
 
       if (error) {
@@ -69,6 +85,16 @@ export const useMessages = (userId: string | undefined) => {
           variant: "destructive",
           title: "Error",
           description: "You must be logged in to send messages",
+        });
+        return;
+      }
+
+      // Validate UUIDs
+      if (!UUID_REGEX.test(currentUserId) || !UUID_REGEX.test(userId)) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Invalid user ID format",
         });
         return;
       }
@@ -112,6 +138,11 @@ export const useMessages = (userId: string | undefined) => {
       const currentUserId = sessionData.session?.user.id;
       
       if (!currentUserId || !userId) return;
+
+      // Validate UUIDs before setting up subscription
+      if (!UUID_REGEX.test(currentUserId) || !UUID_REGEX.test(userId)) {
+        return;
+      }
 
       const channel = supabase
         .channel("messages")
