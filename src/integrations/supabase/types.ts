@@ -11,26 +11,41 @@ export type Database = {
     Tables: {
       clients: {
         Row: {
+          cnpj: string | null
           created_at: string
           created_by: string
+          email: string | null
           id: number
+          is_registered: boolean | null
           name: string
+          phone: string | null
+          registration_token: string | null
           updated_at: string
           usage_count: number | null
         }
         Insert: {
+          cnpj?: string | null
           created_at?: string
           created_by: string
+          email?: string | null
           id?: number
+          is_registered?: boolean | null
           name: string
+          phone?: string | null
+          registration_token?: string | null
           updated_at?: string
           usage_count?: number | null
         }
         Update: {
+          cnpj?: string | null
           created_at?: string
           created_by?: string
+          email?: string | null
           id?: number
+          is_registered?: boolean | null
           name?: string
+          phone?: string | null
+          registration_token?: string | null
           updated_at?: string
           usage_count?: number | null
         }

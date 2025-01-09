@@ -37,21 +37,23 @@ const Register = () => {
       let avatarUrl = null;
       if (avatar) {
         const fileExt = avatar.name.split('.').pop();
-        // Create a path that includes the user's ID
-        const filePath = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
+        const fileName = `${user.id}.${fileExt}`;
         
-        const { error: uploadError, data } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('avatars')
-          .upload(filePath, avatar, { 
+          .upload(fileName, avatar, { 
             upsert: true,
             contentType: avatar.type
           });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw uploadError;
+        }
 
         const { data: { publicUrl } } = supabase.storage
           .from('avatars')
-          .getPublicUrl(filePath);
+          .getPublicUrl(fileName);
 
         avatarUrl = publicUrl;
       }
@@ -66,7 +68,10 @@ const Register = () => {
         })
         .eq('id', user.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Update error:', updateError);
+        throw updateError;
+      }
 
       toast({
         title: "Success!",
@@ -75,9 +80,10 @@ const Register = () => {
 
       navigate('/');
     } catch (error: any) {
+      console.error('Registration error:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to complete registration",
         variant: "destructive",
       });
     } finally {
