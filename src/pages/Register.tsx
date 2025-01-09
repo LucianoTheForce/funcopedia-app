@@ -16,12 +16,19 @@ const Register = () => {
   const [username, setUsername] = useState("");
   const [age, setAge] = useState("");
   const [avatar, setAvatar] = useState<File | null>(null);
+  const [profileGif, setProfileGif] = useState<Blob | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setAvatar(e.target.files[0]);
+      setProfileGif(null); // Clear video when photo is selected
     }
+  };
+
+  const handleVideoRecorded = (blob: Blob) => {
+    setProfileGif(blob);
+    setAvatar(null); // Clear photo when video is selected
   };
 
   const handleSubmit = async () => {
@@ -35,6 +42,8 @@ const Register = () => {
       }
 
       let avatarUrl = null;
+      let profileGifUrl = null;
+
       if (avatar) {
         const fileExt = avatar.name.split('.').pop();
         const fileName = `${user.id}.${fileExt}`;
@@ -58,12 +67,35 @@ const Register = () => {
         avatarUrl = publicUrl;
       }
 
+      if (profileGif) {
+        const fileName = `${user.id}.webm`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, profileGif, { 
+            upsert: true,
+            contentType: 'video/webm'
+          });
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw uploadError;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+
+        profileGifUrl = publicUrl;
+      }
+
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
           username,
           age: parseInt(age),
           avatar_url: avatarUrl,
+          profile_gif: profileGifUrl,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
@@ -98,7 +130,14 @@ const Register = () => {
       case 2:
         return <AgeStep age={age} onChange={setAge} />;
       case 3:
-        return <AvatarStep onFileChange={handleFileChange} avatar={avatar} />;
+        return (
+          <AvatarStep 
+            onFileChange={handleFileChange} 
+            onVideoRecorded={handleVideoRecorded}
+            avatar={avatar}
+            profileGif={profileGif}
+          />
+        );
       default:
         return null;
     }
@@ -140,7 +179,7 @@ const Register = () => {
               <Button
                 onClick={handleSubmit}
                 className="flex-1"
-                disabled={isSubmitting}
+                disabled={isSubmitting || (!avatar && !profileGif)}
               >
                 {isSubmitting ? "Creating Profile..." : "Complete Registration"}
                 <Upload className="ml-2 h-4 w-4" />
