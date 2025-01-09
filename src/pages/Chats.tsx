@@ -1,36 +1,99 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import Navigation from "@/components/Navigation";
 import { MoreVertical } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface ChatPreview {
+  id: string;
+  username: string;
+  avatar_url: string;
+  last_message: string;
+  last_message_time: string;
+}
 
 const Chats = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'chats' | 'taps' | 'views'>('chats');
+  const [chats, setChats] = useState<ChatPreview[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
-  const chats = [
-    {
-      id: 1,
-      name: "Brodi",
-      lastMessage: "Hey! How's it going? 😊",
-      time: "2min ago",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Brodi"
-    },
-    {
-      id: 2,
-      name: "Thomas",
-      lastMessage: "I'm good, you? 🤗",
-      time: "20min ago",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Thomas"
-    },
-    {
-      id: 3,
-      name: "Jim",
-      lastMessage: "What's new here?",
-      time: "1hr ago",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jim"
-    }
-  ];
+  useEffect(() => {
+    const fetchChats = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const currentUserId = sessionData.session?.user.id;
+
+        if (!currentUserId) {
+          navigate('/auth');
+          return;
+        }
+
+        // Fetch latest message for each conversation
+        const { data: messages, error } = await supabase
+          .from('messages')
+          .select(`
+            id,
+            content,
+            created_at,
+            sender_id,
+            receiver_id,
+            profiles!messages_receiver_id_fkey (username, avatar_url)
+          `)
+          .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Process messages to get unique conversations
+        const conversationsMap = new Map<string, ChatPreview>();
+        
+        messages?.forEach(message => {
+          const otherUserId = message.sender_id === currentUserId 
+            ? message.receiver_id 
+            : message.sender_id;
+          
+          if (!conversationsMap.has(otherUserId)) {
+            const profile = message.profiles;
+            conversationsMap.set(otherUserId, {
+              id: otherUserId,
+              username: profile?.username || 'Unknown User',
+              avatar_url: profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${otherUserId}`,
+              last_message: message.content,
+              last_message_time: formatMessageTime(message.created_at),
+            });
+          }
+        });
+
+        setChats(Array.from(conversationsMap.values()));
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching chats:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load chats. Please try again later.",
+        });
+        setIsLoading(false);
+      }
+    };
+
+    fetchChats();
+  }, [navigate]);
+
+  const formatMessageTime = (timestamp: string) => {
+    const messageDate = new Date(timestamp);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - messageDate.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}min ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}hr ago`;
+    return messageDate.toLocaleDateString();
+  };
 
   return (
     <div className="min-h-screen bg-black pb-20">
@@ -60,26 +123,32 @@ const Chats = () => {
       </header>
 
       <main className="px-4 mt-4">
-        <div className="space-y-4">
-          {chats.map((chat) => (
-            <button
-              key={chat.id}
-              className="flex items-center gap-3 w-full text-left"
-              onClick={() => navigate(`/chat/${chat.id}`)}
-            >
-              <Avatar className="w-12 h-12">
-                <AvatarImage src={chat.avatar} alt={chat.name} />
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-center">
-                  <span className="text-white font-medium">{chat.name}</span>
-                  <span className="text-xs text-gray-500">{chat.time}</span>
+        {isLoading ? (
+          <div className="text-gray-500 text-center py-4">Loading chats...</div>
+        ) : chats.length === 0 ? (
+          <div className="text-gray-500 text-center py-4">No messages yet</div>
+        ) : (
+          <div className="space-y-4">
+            {chats.map((chat) => (
+              <button
+                key={chat.id}
+                className="flex items-center gap-3 w-full text-left"
+                onClick={() => navigate(`/chat/${chat.id}`)}
+              >
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={chat.avatar_url} alt={chat.username} />
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center">
+                    <span className="text-white font-medium">{chat.username}</span>
+                    <span className="text-xs text-gray-500">{chat.last_message_time}</span>
+                  </div>
+                  <p className="text-gray-400 text-sm truncate">{chat.last_message}</p>
                 </div>
-                <p className="text-gray-400 text-sm truncate">{chat.lastMessage}</p>
-              </div>
-            </button>
-          ))}
-        </div>
+              </button>
+            ))}
+          </div>
+        )}
       </main>
 
       <Navigation />
