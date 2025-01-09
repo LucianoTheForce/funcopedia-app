@@ -1,10 +1,8 @@
-import { useNavigate } from "react-router-dom";
 import { ChatPreview } from "@/components/chat/ChatPreview";
 import { EmptyChats } from "@/components/chat/EmptyChats";
 import { useChats } from "@/hooks/useChats";
 
 const Chats = () => {
-  const navigate = useNavigate();
   const { chats, loading } = useChats();
 
   if (loading) {
@@ -27,7 +25,6 @@ const Chats = () => {
             <ChatPreview
               key={chat.id}
               {...chat}
-              onClick={() => navigate(`/chat/${chat.profile.username}`)}
             />
           ))}
         </div>

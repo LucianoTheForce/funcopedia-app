@@ -1,5 +1,6 @@
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { formatDate } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 interface ChatPreviewProps {
   id: string;
@@ -9,14 +10,19 @@ interface ChatPreviewProps {
     username: string;
     avatar_url: string | null;
   };
-  onClick: () => void;
 }
 
-export const ChatPreview = ({ content, created_at, profile, onClick }: ChatPreviewProps) => {
+export const ChatPreview = ({ content, created_at, profile }: ChatPreviewProps) => {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    navigate(`/chat/${profile.username}`);
+  };
+
   return (
     <div
       className="flex items-center gap-4 p-4 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors"
-      onClick={onClick}
+      onClick={handleClick}
     >
       <Avatar className="w-12 h-12">
         <AvatarImage 
