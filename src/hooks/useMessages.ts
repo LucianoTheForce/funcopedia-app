@@ -96,14 +96,19 @@ export const useMessages = (userId: string | undefined) => {
   }, [userId]);
 
   useEffect(() => {
+    let cleanup: (() => void) | undefined;
+
     const setupSubscription = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const currentUserId = sessionData.session?.user.id;
       
-      return useMessageSubscription(userId, currentUserId, setState);
+      if (currentUserId && userId) {
+        cleanup = useMessageSubscription(userId, currentUserId, setState);
+      }
     };
 
-    const cleanup = setupSubscription();
+    setupSubscription();
+
     return () => {
       if (cleanup) {
         cleanup();
