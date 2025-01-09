@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Chat from "./pages/Chat";
 import Chats from "./pages/Chats";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -93,7 +94,7 @@ const App = () => (
             path="/profile"
             element={
               <ProtectedRoute>
-                <Navigate to="/" />
+                <Profile />
               </ProtectedRoute>
             }
           />
