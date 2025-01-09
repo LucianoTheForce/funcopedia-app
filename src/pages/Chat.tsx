@@ -26,26 +26,46 @@ const Chat = () => {
   // Fetch initial messages
   useEffect(() => {
     const fetchMessages = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session?.user.id || !userId) return;
+      try {
+        const sessionResponse = await supabase.auth.getSession();
+        const currentUserId = sessionResponse.data.session?.user.id;
+        
+        if (!currentUserId || !userId) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Authentication required",
+          });
+          return;
+        }
 
-      const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .or(`and(sender_id.eq.${session.session.user.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${session.session.user.id})`)
-        .order("created_at", { ascending: true });
+        const { data, error } = await supabase
+          .from("messages")
+          .select("*")
+          .or(
+            `and(sender_id.eq.${currentUserId},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${currentUserId})`
+          )
+          .order("created_at", { ascending: true });
 
-      if (error) {
-        console.error("Error fetching messages:", error);
+        if (error) {
+          console.error("Error fetching messages:", error);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to load messages",
+          });
+          return;
+        }
+
+        setMessages(data || []);
+      } catch (error) {
+        console.error("Error in fetchMessages:", error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to load messages",
+          description: "An unexpected error occurred",
         });
-        return;
       }
-
-      setMessages(data || []);
     };
 
     fetchMessages();
@@ -53,54 +73,79 @@ const Chat = () => {
 
   // Subscribe to new messages
   useEffect(() => {
-    const { data: session } = supabase.auth.getSession();
-    if (!session || !userId) return;
+    const setupSubscription = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const currentUserId = sessionData.session?.user.id;
+      
+      if (!currentUserId || !userId) return;
 
-    const channel = supabase
-      .channel("messages")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `sender_id=eq.${userId},receiver_id=eq.${session.user?.id}`,
-        },
-        (payload) => {
-          setMessages((current) => [...current, payload.new as Message]);
-        }
-      )
-      .subscribe();
+      const channel = supabase
+        .channel("messages")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages",
+            filter: `sender_id=eq.${userId},receiver_id=eq.${currentUserId}`,
+          },
+          (payload) => {
+            setMessages((current) => [...current, payload.new as Message]);
+          }
+        )
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
+      return () => {
+        supabase.removeChannel(channel);
+      };
     };
+
+    setupSubscription();
   }, [userId]);
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !userId) return;
 
     setIsLoading(true);
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session?.user.id) return;
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const currentUserId = sessionData.session?.user.id;
+      
+      if (!currentUserId) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "You must be logged in to send messages",
+        });
+        return;
+      }
 
-    const { error } = await supabase.from("messages").insert({
-      content: newMessage.trim(),
-      sender_id: session.session.user.id,
-      receiver_id: userId,
-    });
+      const { error } = await supabase.from("messages").insert({
+        content: newMessage.trim(),
+        sender_id: currentUserId,
+        receiver_id: userId,
+      });
 
-    if (error) {
-      console.error("Error sending message:", error);
+      if (error) {
+        console.error("Error sending message:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to send message",
+        });
+      } else {
+        setNewMessage("");
+      }
+    } catch (error) {
+      console.error("Error in sendMessage:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to send message",
+        description: "An unexpected error occurred",
       });
-    } else {
-      setNewMessage("");
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
