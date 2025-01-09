@@ -4,15 +4,10 @@ import Navigation from "../components/Navigation";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import type { Tables } from "@/integrations/supabase/types";
 
-interface Profile {
-  id: string;
-  username: string;
-  avatar_url: string;
-  online: boolean;
-  is_fake: boolean;
-}
+type Profile = Tables<"profiles">;
 
 interface Coordinates {
   latitude: number;
@@ -115,12 +110,12 @@ const Index = () => {
   };
 
   // Function to determine text color based on user type
-  const getUserTextColor = (isFake: boolean) => {
+  const getUserTextColor = (isFake: boolean | null) => {
     return isFake ? 'text-gray-400' : 'text-white';
   };
 
   // Function to determine background color based on user type
-  const getUserBackgroundColor = (isFake: boolean) => {
+  const getUserBackgroundColor = (isFake: boolean | null) => {
     return isFake ? 'bg-gray-700' : 'bg-gradient-to-r from-primary to-orange-400';
   };
 
@@ -145,7 +140,7 @@ const Index = () => {
                 onClick={() => handleUserClick(user.id)}
               >
                 <Avatar className={`w-16 h-16 ring-2 ${user.is_fake ? 'ring-gray-600' : 'ring-primary'}`}>
-                  <AvatarImage src={user.avatar_url} alt={user.username} className="object-cover" />
+                  <AvatarImage src={user.avatar_url || ''} alt={user.username || ''} className={`object-cover ${user.is_fake ? 'grayscale' : ''}`} />
                 </Avatar>
                 <span className={`text-sm mt-2 ${getUserTextColor(user.is_fake)}`}>
                   {user.username}
@@ -165,9 +160,9 @@ const Index = () => {
                 onClick={() => handleUserClick(user.id)}
               >
                 <img 
-                  src={user.avatar_url} 
-                  alt={user.username} 
-                  className={`w-full h-full object-cover ${user.is_fake ? 'filter grayscale' : ''}`} 
+                  src={user.avatar_url || ''} 
+                  alt={user.username || ''} 
+                  className={`w-full h-full object-cover ${user.is_fake ? 'grayscale' : ''}`} 
                 />
                 <div className={`absolute bottom-0 left-0 right-0 p-2 ${getUserBackgroundColor(user.is_fake)}`}>
                   <div className="flex items-center gap-1">

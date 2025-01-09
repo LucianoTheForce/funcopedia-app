@@ -71,6 +71,8 @@ export type Database = {
           id: string
           is_fake: boolean | null
           last_seen: string | null
+          latitude: number | null
+          longitude: number | null
           online: boolean | null
           profile_gif: string | null
           updated_at: string | null
@@ -83,6 +85,8 @@ export type Database = {
           id: string
           is_fake?: boolean | null
           last_seen?: string | null
+          latitude?: number | null
+          longitude?: number | null
           online?: boolean | null
           profile_gif?: string | null
           updated_at?: string | null
@@ -95,6 +99,8 @@ export type Database = {
           id?: string
           is_fake?: boolean | null
           last_seen?: string | null
+          latitude?: number | null
+          longitude?: number | null
           online?: boolean | null
           profile_gif?: string | null
           updated_at?: string | null
