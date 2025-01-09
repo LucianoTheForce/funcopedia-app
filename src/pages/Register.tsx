@@ -37,11 +37,15 @@ const Register = () => {
       let avatarUrl = null;
       if (avatar) {
         const fileExt = avatar.name.split('.').pop();
-        const filePath = `${user.id}.${fileExt}`;
+        // Create a path that includes the user's ID
+        const filePath = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
         
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError, data } = await supabase.storage
           .from('avatars')
-          .upload(filePath, avatar, { upsert: true });
+          .upload(filePath, avatar, { 
+            upsert: true,
+            contentType: avatar.type
+          });
 
         if (uploadError) throw uploadError;
 
