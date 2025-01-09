@@ -1,4 +1,4 @@
-import { Home, MessageSquare, Search, User } from "lucide-react";
+import { ShoppingBag, Star, Home, MessageSquare, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const Navigation = () => {
@@ -9,19 +9,27 @@ const Navigation = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-secondary border-t border-muted p-2 px-6">
-      <div className="max-w-lg mx-auto flex justify-between items-center">
-        <Link to="/" className={`p-3 rounded-lg transition-colors ${isActive('/') ? 'text-primary bg-muted' : 'text-muted-foreground hover:text-primary'}`}>
-          <Home size={24} />
+    <nav className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-lg p-2">
+      <div className="max-w-lg mx-auto flex justify-between items-center px-6">
+        <Link to="/store" className="flex flex-col items-center">
+          <ShoppingBag size={24} className={`${isActive('/store') ? 'text-primary' : 'text-gray-500'}`} />
+          <span className="text-xs mt-1 text-gray-500">Store</span>
         </Link>
-        <Link to="/search" className={`p-3 rounded-lg transition-colors ${isActive('/search') ? 'text-primary bg-muted' : 'text-muted-foreground hover:text-primary'}`}>
-          <Search size={24} />
+        <Link to="/favourites" className="flex flex-col items-center">
+          <Star size={24} className={`${isActive('/favourites') ? 'text-primary' : 'text-gray-500'}`} />
+          <span className="text-xs mt-1 text-gray-500">Favourites</span>
         </Link>
-        <Link to="/messages" className={`p-3 rounded-lg transition-colors ${isActive('/messages') ? 'text-primary bg-muted' : 'text-muted-foreground hover:text-primary'}`}>
-          <MessageSquare size={24} />
+        <Link to="/" className="flex flex-col items-center">
+          <Home size={24} className={`${isActive('/') ? 'text-primary' : 'text-gray-500'}`} />
+          <span className="text-xs mt-1 text-gray-500">Home</span>
         </Link>
-        <Link to="/profile" className={`p-3 rounded-lg transition-colors ${isActive('/profile') ? 'text-primary bg-muted' : 'text-muted-foreground hover:text-primary'}`}>
-          <User size={24} />
+        <Link to="/chats" className="flex flex-col items-center">
+          <MessageSquare size={24} className={`${isActive('/chats') ? 'text-primary' : 'text-gray-500'}`} />
+          <span className="text-xs mt-1 text-gray-500">Chats</span>
+        </Link>
+        <Link to="/profile" className="flex flex-col items-center">
+          <User size={24} className={`${isActive('/profile') ? 'text-primary' : 'text-gray-500'}`} />
+          <span className="text-xs mt-1 text-gray-500">Profile</span>
         </Link>
       </div>
     </nav>

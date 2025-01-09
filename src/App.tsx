@@ -56,7 +56,7 @@ const App = () => (
             }
           />
           <Route
-            path="/search"
+            path="/store"
             element={
               <ProtectedRoute>
                 <Navigate to="/" />
@@ -64,7 +64,15 @@ const App = () => (
             }
           />
           <Route
-            path="/messages"
+            path="/favourites"
+            element={
+              <ProtectedRoute>
+                <Navigate to="/" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chats"
             element={
               <ProtectedRoute>
                 <Navigate to="/" />
