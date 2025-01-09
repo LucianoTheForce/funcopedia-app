@@ -32,7 +32,7 @@ const Chats = () => {
           return;
         }
 
-        // Fetch latest message for each conversation
+        // Fetch latest message for each conversation with profile information
         const { data: messages, error } = await supabase
           .from('messages')
           .select(`
@@ -41,7 +41,8 @@ const Chats = () => {
             created_at,
             sender_id,
             receiver_id,
-            profiles!messages_receiver_id_fkey (username, avatar_url)
+            sender:profiles!messages_sender_profile_fkey (username, avatar_url),
+            receiver:profiles!messages_receiver_profile_fkey (username, avatar_url)
           `)
           .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
           .order('created_at', { ascending: false });
@@ -52,16 +53,15 @@ const Chats = () => {
         const conversationsMap = new Map<string, ChatPreview>();
         
         messages?.forEach(message => {
-          const otherUserId = message.sender_id === currentUserId 
-            ? message.receiver_id 
-            : message.sender_id;
+          const isCurrentUserSender = message.sender_id === currentUserId;
+          const otherUserId = isCurrentUserSender ? message.receiver_id : message.sender_id;
+          const otherUserProfile = isCurrentUserSender ? message.receiver : message.sender;
           
-          if (!conversationsMap.has(otherUserId)) {
-            const profile = message.profiles;
+          if (!conversationsMap.has(otherUserId) && otherUserProfile) {
             conversationsMap.set(otherUserId, {
               id: otherUserId,
-              username: profile?.username || 'Unknown User',
-              avatar_url: profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${otherUserId}`,
+              username: otherUserProfile.username || 'Unknown User',
+              avatar_url: otherUserProfile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${otherUserId}`,
               last_message: message.content,
               last_message_time: formatMessageTime(message.created_at),
             });
