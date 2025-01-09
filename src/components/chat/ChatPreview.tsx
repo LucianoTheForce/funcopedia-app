@@ -20,7 +20,7 @@ export const ChatPreview = ({ profile }: ChatPreviewProps) => {
       console.error('No username available for navigation');
       return;
     }
-    navigate(`/chat/${profile.username}`, { replace: true });
+    navigate(`/chat/${profile.username}`);
   };
 
   return (
