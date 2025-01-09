@@ -26,27 +26,48 @@ const Profile = () => {
   const getProfile = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user found");
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
       
       setUser(user);
 
-      const { data: profile, error } = await supabase
+      let { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+
+      // If no profile exists, create one
+      if (!profile) {
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([
+            { 
+              id: user.id,
+              username: user.email?.split('@')[0] || '',
+              avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
+            }
+          ])
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        profile = newProfile;
+      }
 
       setProfile(profile);
       setUsername(profile.username || "");
       setAvatarUrl(profile.avatar_url || "");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading user:", error);
       toast({
         variant: "destructive",
         title: "Error loading profile",
-        description: "Please try again later.",
+        description: error.message || "Please try again later.",
       });
     } finally {
       setLoading(false);
@@ -72,12 +93,12 @@ const Profile = () => {
       });
       setEditing(false);
       getProfile();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating profile:", error);
       toast({
         variant: "destructive",
         title: "Error updating profile",
-        description: "Please try again later.",
+        description: error.message || "Please try again later.",
       });
     }
   };
@@ -87,12 +108,12 @@ const Profile = () => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       navigate("/auth");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing out:", error);
       toast({
         variant: "destructive",
         title: "Error signing out",
-        description: "Please try again later.",
+        description: error.message || "Please try again later.",
       });
     }
   };
