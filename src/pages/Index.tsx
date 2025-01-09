@@ -4,6 +4,7 @@ import Navigation from "../components/Navigation";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Profile {
   id: string;
@@ -13,32 +14,101 @@ interface Profile {
   is_fake: boolean;
 }
 
+interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
+
 const Index = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [nearbyUsers, setNearbyUsers] = useState<Profile[]>([]);
   const [freshFaces, setFreshFaces] = useState<Profile[]>([]);
+  const [currentUser, setCurrentUser] = useState<Profile | null>(null);
+  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
+
+  const requestLocationPermission = async () => {
+    if ("geolocation" in navigator) {
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+          });
+        });
+
+        setUserLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+
+        // Update user's profile with location
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('profiles')
+            .update({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            })
+            .eq('id', user.id);
+        }
+      } catch (error) {
+        toast({
+          title: "Localização",
+          description: "Por favor, permita o acesso à sua localização para ver usuários próximos.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchProfiles = async () => {
-      const { data: profiles, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate('/auth');
+        return;
+      }
+
+      // First, get the current user's profile
+      const { data: currentUserProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (currentUserProfile) {
+        setCurrentUser(currentUserProfile);
+      }
+
+      // Then get all other profiles
+      const { data: profiles } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching profiles:', error);
-        return;
-      }
-
-      // Split profiles into fresh faces (newest 6) and nearby users (rest)
       if (profiles) {
-        setFreshFaces(profiles.slice(0, 6));
-        setNearbyUsers(profiles.slice(6));
+        // Filter out current user from the profiles
+        const otherProfiles = profiles.filter(profile => profile.id !== user.id);
+        
+        // Split profiles into fresh faces (newest 6) and nearby users
+        setFreshFaces(otherProfiles.slice(0, 6));
+        
+        // For nearby users, put current user first, then others
+        const nearbyUsersArray = currentUserProfile 
+          ? [currentUserProfile, ...otherProfiles.slice(6)]
+          : otherProfiles.slice(6);
+        
+        setNearbyUsers(nearbyUsersArray);
       }
     };
 
     fetchProfiles();
-  }, []);
+    requestLocationPermission();
+  }, [navigate]);
   
   const handleUserClick = (userId: string) => {
     navigate(`/chat/${userId}`);
@@ -102,7 +172,9 @@ const Index = () => {
                 <div className={`absolute bottom-0 left-0 right-0 p-2 ${getUserBackgroundColor(user.is_fake)}`}>
                   <div className="flex items-center gap-1">
                     <div className={`w-2 h-2 rounded-full ${user.online ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                    <span className="text-white text-sm">{user.username}</span>
+                    <span className="text-white text-sm">
+                      {user.id === currentUser?.id ? `${user.username} (You)` : user.username}
+                    </span>
                   </div>
                 </div>
                 <button 
