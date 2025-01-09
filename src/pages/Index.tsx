@@ -97,8 +97,8 @@ const Index = () => {
     requestLocationPermission();
   }, [navigate]);
   
-  const handleUserClick = (userId: string) => {
-    navigate(`/chat/${userId}`);
+  const handleUserClick = (username: string) => {
+    navigate('/chats'); // Changed this line to navigate to chats first
   };
 
   const getUserTextColor = (isFake: boolean | null) => {
