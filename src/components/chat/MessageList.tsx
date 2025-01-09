@@ -12,14 +12,14 @@ export const MessageList = ({ messages, userId }: MessageListProps) => {
         <div
           key={message.id}
           className={`flex flex-col gap-2 ${
-            message.sender_id === userId ? "" : "items-end"
+            message.sender_id === userId ? "items-end" : "items-start"
           }`}
         >
           <div
             className={`p-3 rounded-lg max-w-[80%] ${
               message.sender_id === userId
-                ? "bg-gray-800 text-white self-start"
-                : "bg-orange-500 text-white self-end"
+                ? "bg-orange-500 text-white self-end"
+                : "bg-gray-800 text-white self-start"
             }`}
           >
             {message.content}
