@@ -4,22 +4,27 @@ import { Avatar, AvatarImage } from "@/components/ui/avatar";
 
 const Index = () => {
   const freshFaces = [
-    { id: 1, name: "Thomas", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
-    { id: 2, name: "Jamie", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
-    { id: 3, name: "Connor", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
-    { id: 4, name: "Benjamin", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
+    { id: 1, name: "Sofia", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
+    { id: 2, name: "Lucas", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
+    { id: 3, name: "Isabella", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
+    { id: 4, name: "Miguel", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
+    { id: 5, name: "Valentina", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
+    { id: 6, name: "João", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png" },
   ];
 
   const nearbyUsers = [
-    { id: 1, name: "Brodi", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 2, name: "Ben", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 3, name: "John", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 4, name: "Thomas", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 5, name: "Seraph", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 6, name: "Johnathan", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 7, name: "Martin", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 8, name: "Ezikiel", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
-    { id: 9, name: "Daniel", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
+    { id: 1, name: "Maria", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
+    { id: 2, name: "Pedro", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
+    { id: 3, name: "Ana", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: false },
+    { id: 4, name: "Gabriel", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
+    { id: 5, name: "Julia", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: false },
+    { id: 6, name: "Rafael", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
+    { id: 7, name: "Beatriz", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
+    { id: 8, name: "Thiago", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: false },
+    { id: 9, name: "Laura", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
+    { id: 10, name: "Bruno", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
+    { id: 11, name: "Carolina", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: false },
+    { id: 12, name: "Diego", image: "/lovable-uploads/ad4947e3-f150-4059-b979-7e600e1d71c6.png", online: true },
   ];
 
   return (
@@ -55,7 +60,7 @@ const Index = () => {
                 <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
                 <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
                   <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div className={`w-2 h-2 rounded-full ${user.online ? 'bg-green-500' : 'bg-gray-400'}`}></div>
                     <span className="text-white text-sm">{user.name}</span>
                   </div>
                 </div>
