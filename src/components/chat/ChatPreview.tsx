@@ -12,7 +12,7 @@ interface ChatPreviewProps {
   };
 }
 
-export const ChatPreview = ({ content, created_at, profile }: ChatPreviewProps) => {
+export const ChatPreview = ({ id, content, created_at, profile }: ChatPreviewProps) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
