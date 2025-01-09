@@ -1,125 +1,88 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
-import { Message, MessagesState } from "@/types/messages";
-import { fetchUserMessages, sendUserMessage } from "@/services/messages";
-import { useMessageSubscription } from "./useMessageSubscription";
+import { useState, useEffect } from 'react';
+import { fetchUserMessages, sendUserMessage } from '@/services/messages';
+import { Message } from '@/types/messages';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from './use-toast';
 
-export const useMessages = (userId: string | undefined) => {
-  const [state, setState] = useState<MessagesState>({
-    messages: [],
-    isLoading: false,
-    error: null,
-  });
+export const useMessages = (receiverId: string | null) => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchMessages = async () => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const currentUserId = sessionData.session?.user.id;
-      
-      if (!currentUserId || !userId) {
-        throw new Error("Authentication required");
-      }
-
-      setState((prev) => ({ ...prev, isLoading: true, error: null }));
-      const messages = await fetchUserMessages(currentUserId, userId);
-      
-      setState((prev) => ({
-        ...prev,
-        messages,
-        isLoading: false,
-      }));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to load messages";
-      setState((prev) => ({
-        ...prev,
-        error: message,
-        isLoading: false,
-      }));
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: message,
-      });
-    }
-  };
-
-  const sendMessage = async (content: string) => {
-    if (!content.trim() || !userId) return;
-
-    try {
-      setState((prev) => ({ ...prev, isLoading: true, error: null }));
-      
-      const { data: sessionData } = await supabase.auth.getSession();
-      const currentUserId = sessionData.session?.user.id;
-      
-      if (!currentUserId) {
-        throw new Error("You must be logged in to send messages");
-      }
-
-      await sendUserMessage(currentUserId, userId, content);
-      
-      // Add optimistic update
-      const newMessage: Message = {
-        id: crypto.randomUUID(),
-        content: content.trim(),
-        sender_id: currentUserId,
-        receiver_id: userId,
-        created_at: new Date().toISOString(),
-      };
-
-      setState((prev) => ({
-        ...prev,
-        messages: [...prev.messages, newMessage],
-        isLoading: false,
-      }));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to send message";
-      setState((prev) => ({
-        ...prev,
-        error: message,
-        isLoading: false,
-      }));
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: message,
-      });
-    }
-  };
-
   useEffect(() => {
-    if (userId) {
-      fetchMessages();
-    }
-  }, [userId]);
+    const fetchMessages = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || !receiverId) return;
 
-  useEffect(() => {
-    let cleanup: (() => void) | undefined;
-
-    const setupSubscription = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const currentUserId = sessionData.session?.user.id;
-      
-      if (currentUserId && userId) {
-        cleanup = useMessageSubscription(userId, currentUserId, setState);
+        const fetchedMessages = await fetchUserMessages(user.id, receiverId);
+        setMessages(fetchedMessages);
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load messages",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    setupSubscription();
+    fetchMessages();
+
+    // Set up realtime subscription
+    const subscription = supabase
+      .channel('messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `sender_id=eq.${receiverId}`,
+        },
+        (payload) => {
+          const newMessage = payload.new as Message;
+          setMessages((prev) => [...prev, newMessage]);
+        }
+      )
+      .subscribe();
 
     return () => {
-      if (cleanup) {
-        cleanup();
-      }
+      subscription.unsubscribe();
     };
-  }, [userId]);
+  }, [receiverId, toast]);
 
-  return {
-    messages: state.messages,
-    isLoading: state.isLoading,
-    error: state.error,
-    sendMessage,
+  const sendMessage = async (content: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !receiverId) return;
+
+      // Optimistic update
+      const optimisticMessage: Message = {
+        id: crypto.randomUUID(),
+        content,
+        sender_id: user.id,
+        receiver_id: receiverId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        sender: null,
+        receiver: null,
+      };
+
+      setMessages((prev) => [...prev, optimisticMessage]);
+
+      await sendUserMessage(user.id, receiverId, content);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive",
+      });
+    }
   };
+
+  return { messages, isLoading, sendMessage };
 };
