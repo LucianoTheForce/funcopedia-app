@@ -2,10 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Message, MessagesState } from "@/types/messages";
-import { 
-  fetchUserMessages, 
-  sendUserMessage
-} from "@/services/messages";
+import { fetchUserMessages, sendUserMessage } from "@/services/messages";
+import { useMessageSubscription } from "./useMessageSubscription";
 
 export const useMessages = (userId: string | undefined) => {
   const [state, setState] = useState<MessagesState>({
@@ -102,61 +100,15 @@ export const useMessages = (userId: string | undefined) => {
       const { data: sessionData } = await supabase.auth.getSession();
       const currentUserId = sessionData.session?.user.id;
       
-      if (!currentUserId || !userId) return;
-
-      console.log('Setting up subscription for:', { currentUserId, userId });
-
-      const channel = supabase
-        .channel('messages')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'messages',
-            filter: `sender_id=eq.${userId},receiver_id=eq.${currentUserId}`,
-          },
-          (payload) => {
-            console.log('Received message payload:', payload);
-            if (payload.eventType === 'INSERT') {
-              const newMessage = payload.new as Message;
-              setState((prev) => ({
-                ...prev,
-                messages: [...prev.messages, newMessage],
-              }));
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'messages',
-            filter: `sender_id=eq.${currentUserId},receiver_id=eq.${userId}`,
-          },
-          (payload) => {
-            console.log('Sent message payload:', payload);
-            if (payload.eventType === 'INSERT') {
-              const newMessage = payload.new as Message;
-              setState((prev) => ({
-                ...prev,
-                messages: prev.messages.map(msg => 
-                  msg.id === newMessage.id ? newMessage : msg
-                ),
-              }));
-            }
-          }
-        )
-        .subscribe();
-
-      return () => {
-        console.log('Cleaning up subscription');
-        supabase.removeChannel(channel);
-      };
+      return useMessageSubscription(userId, currentUserId, setState);
     };
 
-    setupSubscription();
+    const cleanup = setupSubscription();
+    return () => {
+      if (cleanup) {
+        cleanup();
+      }
+    };
   }, [userId]);
 
   return {
