@@ -104,22 +104,46 @@ export const useMessages = (userId: string | undefined) => {
       
       if (!currentUserId || !userId) return;
 
+      // Subscribe to both sent and received messages
       const channel = supabase
         .channel('messages')
         .on(
           'postgres_changes',
           {
-            event: 'INSERT',
+            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
             schema: 'public',
             table: 'messages',
-            filter: `receiver_id=eq.${currentUserId}`,
+            filter: `sender_id=eq.${userId},receiver_id=eq.${currentUserId}`, // Messages sent to current user
           },
           (payload) => {
-            const newMessage = payload.new as Message;
-            if (newMessage.sender_id === userId) {
+            console.log('Received message payload:', payload);
+            if (payload.eventType === 'INSERT') {
+              const newMessage = payload.new as Message;
               setState((prev) => ({
                 ...prev,
                 messages: [...prev.messages, newMessage],
+              }));
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'messages',
+            filter: `sender_id=eq.${currentUserId},receiver_id=eq.${userId}`, // Messages sent by current user
+          },
+          (payload) => {
+            console.log('Sent message payload:', payload);
+            if (payload.eventType === 'INSERT') {
+              const newMessage = payload.new as Message;
+              // Update the optimistic message with the real one
+              setState((prev) => ({
+                ...prev,
+                messages: prev.messages.map(msg => 
+                  msg.id === newMessage.id ? newMessage : msg
+                ),
               }));
             }
           }
