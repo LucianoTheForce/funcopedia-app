@@ -98,7 +98,7 @@ const Index = () => {
   }, [navigate]);
   
   const handleUserClick = (username: string) => {
-    navigate('/chats'); // Changed this line to navigate to chats first
+    navigate(`/chat/${username}`); // Updated to navigate directly to chat
   };
 
   const getUserTextColor = (isFake: boolean | null) => {
