@@ -1,4 +1,4 @@
-import { Message } from "@/hooks/useMessages";
+import { Message } from "@/types/messages";
 
 interface MessageListProps {
   messages: Message[];
