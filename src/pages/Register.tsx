@@ -22,13 +22,13 @@ const Register = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setAvatar(e.target.files[0]);
-      setProfileGif(null); // Clear video when photo is selected
+      setProfileGif(null);
     }
   };
 
   const handleVideoRecorded = (blob: Blob) => {
     setProfileGif(blob);
-    setAvatar(null); // Clear photo when video is selected
+    setAvatar(null);
   };
 
   const handleSubmit = async () => {

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Video, Camera, StopCircle } from "lucide-react";
+import { Upload, Camera, StopCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +34,9 @@ export const AvatarStep = ({ onFileChange, onVideoRecorded, avatar, profileGif }
         videoRef.current.srcObject = mediaStream;
       }
 
-      const mediaRecorder = new MediaRecorder(mediaStream);
+      const mediaRecorder = new MediaRecorder(mediaStream, {
+        mimeType: 'video/webm'
+      });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
@@ -52,6 +54,13 @@ export const AvatarStep = ({ onFileChange, onVideoRecorded, avatar, profileGif }
 
       mediaRecorder.start();
       setIsRecording(true);
+
+      // Automatically stop recording after 3 seconds
+      setTimeout(() => {
+        if (mediaRecorderRef.current && isRecording) {
+          stopRecording();
+        }
+      }, 3000);
     } catch (error) {
       console.error("Error accessing camera:", error);
     }
@@ -90,14 +99,12 @@ export const AvatarStep = ({ onFileChange, onVideoRecorded, avatar, profileGif }
                 muted
                 className="w-32 h-32 rounded-full object-cover"
               />
-              <Button
-                variant="destructive"
-                size="icon"
-                className="absolute bottom-0 right-0"
-                onClick={stopRecording}
-              >
-                <StopCircle className="h-4 w-4" />
-              </Button>
+              {isRecording && (
+                <div className="absolute top-0 right-0 w-3 h-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </div>
+              )}
             </div>
           ) : profileGif ? (
             <video
