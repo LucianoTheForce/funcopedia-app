@@ -16,7 +16,10 @@ export const ChatPreview = ({ id, content, created_at, profile }: ChatPreviewPro
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate(`/chat/${profile.username}`);
+    if (profile?.username) {
+      // Navegação direta para o chat usando o username
+      navigate(`/chat/${profile.username}`, { replace: true });
+    }
   };
 
   return (

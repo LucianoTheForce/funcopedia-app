@@ -15,7 +15,7 @@ const Chat = () => {
   const { toast } = useToast();
   const [userId, setUserId] = useState<string | null>(null);
   const { messages, isLoading, sendMessage } = useMessages(userId);
-  const [receiverProfile, setReceiverProfile] = useState<{ username: string; avatar_url: string } | null>(null);
+  const [receiverProfile, setReceiverProfile] = useState<{ username: string; avatar_url: string | null } | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -37,20 +37,20 @@ const Chat = () => {
           .from('profiles')
           .select('id, username, avatar_url')
           .eq('username', username)
-          .maybeSingle();
+          .single();
           
         if (error) throw error;
         
         if (data) {
           setUserId(data.id);
           setReceiverProfile({
-            username: data.username || username,
+            username: data.username,
             avatar_url: data.avatar_url
           });
         } else {
           toast({
-            title: "Error",
-            description: "User not found",
+            title: "Erro",
+            description: "Usuário não encontrado",
             variant: "destructive",
           });
           navigate('/chats');
@@ -58,8 +58,8 @@ const Chat = () => {
       } catch (error) {
         console.error('Error fetching receiver profile:', error);
         toast({
-          title: "Error",
-          description: "Failed to load user profile",
+          title: "Erro",
+          description: "Falha ao carregar perfil do usuário",
           variant: "destructive",
         });
       }
@@ -68,7 +68,7 @@ const Chat = () => {
     fetchReceiverProfile();
   }, [username, navigate, toast]);
 
-  if (!username) {
+  if (!username || !receiverProfile) {
     return null;
   }
 
@@ -85,11 +85,12 @@ const Chat = () => {
         </Button>
         <Avatar className="w-10 h-10">
           <AvatarImage
-            src={receiverProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`}
+            src={receiverProfile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`}
+            alt={username}
           />
         </Avatar>
         <div className="flex-1">
-          <h1 className="text-white font-semibold">{receiverProfile?.username || username}</h1>
+          <h1 className="text-white font-semibold">{receiverProfile.username}</h1>
           <p className="text-sm text-gray-400">Online</p>
         </div>
       </div>
