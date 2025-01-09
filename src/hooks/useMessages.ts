@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { RealtimeChannel } from "@supabase/supabase-js";
 
 export interface Message {
   id: string;
@@ -10,12 +11,57 @@ export interface Message {
   created_at: string;
 }
 
-// UUID validation regex
+interface MessagesState {
+  messages: Message[];
+  isLoading: boolean;
+  error: string | null;
+}
+
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const validateUUIDs = (currentUserId: string, userId: string): boolean => {
+  return UUID_REGEX.test(currentUserId) && UUID_REGEX.test(userId);
+};
+
+const buildMessagesQuery = (currentUserId: string, userId: string) => {
+  return supabase
+    .from("messages")
+    .select("*")
+    .or(
+      `and(sender_id.eq.${currentUserId},receiver_id.eq.${userId}),` +
+      `and(sender_id.eq.${userId},receiver_id.eq.${currentUserId})`
+    )
+    .order("created_at", { ascending: true });
+};
+
+const setupMessageSubscription = (
+  currentUserId: string,
+  userId: string,
+  onNewMessage: (message: Message) => void
+): RealtimeChannel => {
+  return supabase
+    .channel("messages")
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `sender_id=eq.${userId},receiver_id=eq.${currentUserId}`,
+      },
+      (payload) => {
+        onNewMessage(payload.new as Message);
+      }
+    )
+    .subscribe();
+};
+
 export const useMessages = (userId: string | undefined) => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [state, setState] = useState<MessagesState>({
+    messages: [],
+    isLoading: false,
+    error: null,
+  });
   const { toast } = useToast();
 
   const fetchMessages = async () => {
@@ -24,50 +70,34 @@ export const useMessages = (userId: string | undefined) => {
       const currentUserId = sessionData.session?.user.id;
       
       if (!currentUserId || !userId) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Authentication required",
-        });
-        return;
+        throw new Error("Authentication required");
       }
 
-      // Validate UUIDs
-      if (!UUID_REGEX.test(currentUserId) || !UUID_REGEX.test(userId)) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Invalid user ID format",
-        });
-        return;
+      if (!validateUUIDs(currentUserId, userId)) {
+        throw new Error("Invalid user ID format");
       }
 
-      const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .or(
-          `and(sender_id.eq.${currentUserId},receiver_id.eq.${userId}),` +
-          `and(sender_id.eq.${userId},receiver_id.eq.${currentUserId})`
-        )
-        .order("created_at", { ascending: true });
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
+      const { data, error } = await buildMessagesQuery(currentUserId, userId);
 
-      if (error) {
-        console.error("Error fetching messages:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to load messages",
-        });
-        return;
-      }
+      if (error) throw error;
 
-      setMessages(data || []);
+      setState((prev) => ({
+        ...prev,
+        messages: data || [],
+        isLoading: false,
+      }));
     } catch (error) {
-      console.error("Error in fetchMessages:", error);
+      const message = error instanceof Error ? error.message : "Failed to load messages";
+      setState((prev) => ({
+        ...prev,
+        error: message,
+        isLoading: false,
+      }));
       toast({
         variant: "destructive",
         title: "Error",
-        description: "An unexpected error occurred",
+        description: message,
       });
     }
   };
@@ -75,28 +105,17 @@ export const useMessages = (userId: string | undefined) => {
   const sendMessage = async (content: string) => {
     if (!content.trim() || !userId) return;
 
-    setIsLoading(true);
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const currentUserId = sessionData.session?.user.id;
       
       if (!currentUserId) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "You must be logged in to send messages",
-        });
-        return;
+        throw new Error("You must be logged in to send messages");
       }
 
-      // Validate UUIDs
-      if (!UUID_REGEX.test(currentUserId) || !UUID_REGEX.test(userId)) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Invalid user ID format",
-        });
-        return;
+      if (!validateUUIDs(currentUserId, userId)) {
+        throw new Error("Invalid user ID format");
       }
 
       const { error } = await supabase.from("messages").insert({
@@ -105,23 +124,21 @@ export const useMessages = (userId: string | undefined) => {
         receiver_id: userId,
       });
 
-      if (error) {
-        console.error("Error sending message:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to send message",
-        });
-      }
+      if (error) throw error;
     } catch (error) {
-      console.error("Error in sendMessage:", error);
+      const message = error instanceof Error ? error.message : "Failed to send message";
+      setState((prev) => ({
+        ...prev,
+        error: message,
+        isLoading: false,
+      }));
       toast({
         variant: "destructive",
         title: "Error",
-        description: "An unexpected error occurred",
+        description: message,
       });
     } finally {
-      setIsLoading(false);
+      setState((prev) => ({ ...prev, isLoading: false }));
     }
   };
 
@@ -131,34 +148,20 @@ export const useMessages = (userId: string | undefined) => {
     }
   }, [userId]);
 
-  // Subscribe to new messages
   useEffect(() => {
     const setupSubscription = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const currentUserId = sessionData.session?.user.id;
       
       if (!currentUserId || !userId) return;
+      if (!validateUUIDs(currentUserId, userId)) return;
 
-      // Validate UUIDs before setting up subscription
-      if (!UUID_REGEX.test(currentUserId) || !UUID_REGEX.test(userId)) {
-        return;
-      }
-
-      const channel = supabase
-        .channel("messages")
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "messages",
-            filter: `sender_id=eq.${userId},receiver_id=eq.${currentUserId}`,
-          },
-          (payload) => {
-            setMessages((current) => [...current, payload.new as Message]);
-          }
-        )
-        .subscribe();
+      const channel = setupMessageSubscription(currentUserId, userId, (newMessage) => {
+        setState((prev) => ({
+          ...prev,
+          messages: [...prev.messages, newMessage],
+        }));
+      });
 
       return () => {
         supabase.removeChannel(channel);
@@ -168,5 +171,10 @@ export const useMessages = (userId: string | undefined) => {
     setupSubscription();
   }, [userId]);
 
-  return { messages, isLoading, sendMessage };
+  return {
+    messages: state.messages,
+    isLoading: state.isLoading,
+    error: state.error,
+    sendMessage,
+  };
 };
