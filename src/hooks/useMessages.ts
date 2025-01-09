@@ -4,8 +4,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Message, MessagesState } from "@/types/messages";
 import { 
   fetchUserMessages, 
-  sendUserMessage, 
-  setupMessageSubscription 
+  sendUserMessage
 } from "@/services/messages";
 
 export const useMessages = (userId: string | undefined) => {
