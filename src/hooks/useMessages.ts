@@ -104,16 +104,17 @@ export const useMessages = (userId: string | undefined) => {
       
       if (!currentUserId || !userId) return;
 
-      // Subscribe to both sent and received messages
+      console.log('Setting up subscription for:', { currentUserId, userId });
+
       const channel = supabase
         .channel('messages')
         .on(
           'postgres_changes',
           {
-            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+            event: '*',
             schema: 'public',
             table: 'messages',
-            filter: `sender_id=eq.${userId},receiver_id=eq.${currentUserId}`, // Messages sent to current user
+            filter: `sender_id=eq.${userId},receiver_id=eq.${currentUserId}`,
           },
           (payload) => {
             console.log('Received message payload:', payload);
@@ -132,13 +133,12 @@ export const useMessages = (userId: string | undefined) => {
             event: '*',
             schema: 'public',
             table: 'messages',
-            filter: `sender_id=eq.${currentUserId},receiver_id=eq.${userId}`, // Messages sent by current user
+            filter: `sender_id=eq.${currentUserId},receiver_id=eq.${userId}`,
           },
           (payload) => {
             console.log('Sent message payload:', payload);
             if (payload.eventType === 'INSERT') {
               const newMessage = payload.new as Message;
-              // Update the optimistic message with the real one
               setState((prev) => ({
                 ...prev,
                 messages: prev.messages.map(msg => 
@@ -151,6 +151,7 @@ export const useMessages = (userId: string | undefined) => {
         .subscribe();
 
       return () => {
+        console.log('Cleaning up subscription');
         supabase.removeChannel(channel);
       };
     };
