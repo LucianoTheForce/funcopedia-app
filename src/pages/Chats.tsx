@@ -24,7 +24,7 @@ const Chats = () => {
           {chats.map((chat) => (
             <ChatPreview
               key={chat.id}
-              {...chat}
+              profile={chat.profile}
             />
           ))}
         </div>

@@ -10,6 +10,7 @@ export interface ChatPreview {
   sender_id: string;
   receiver_id: string;
   profile: {
+    id: string;
     username: string;
     avatar_url: string | null;
   };
@@ -38,6 +39,7 @@ export const useChats = () => {
           sender_id,
           receiver_id,
           profiles!messages_sender_profile_fkey (
+            id,
             username,
             avatar_url
           )
