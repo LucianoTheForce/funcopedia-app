@@ -1,154 +1,194 @@
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card } from "@/components/ui/card"
-import { useNavigate } from "react-router-dom"
-import { supabase } from "@/integrations/supabase/client"
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
+import { ChevronLeft, ChevronRight, Upload } from "lucide-react";
 
-type Step = {
-  title: string
-  description: string
-  field: "username" | "age" | "avatar_url"
-}
-
-const steps: Step[] = [
-  {
-    title: "Choose your username",
-    description: "This is how other users will see you",
-    field: "username"
-  },
-  {
-    title: "How old are you?",
-    description: "Enter your age",
-    field: "age"
-  },
-  {
-    title: "Add a profile picture",
-    description: "Upload your best photo",
-    field: "avatar_url"
-  }
-]
-
-export default function Register() {
-  const [currentStep, setCurrentStep] = useState(0)
+const Register = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     username: "",
     age: "",
-    avatar_url: ""
-  })
-  const navigate = useNavigate()
+    avatarUrl: "",
+    avatarFile: null as File | null,
+  });
 
-  const handleNext = async () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(prev => prev + 1)
-    } else {
-      // Submit form
-      const { error } = await supabase
-        .from('profiles')
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData({
+        ...formData,
+        avatarFile: file,
+        avatarUrl: URL.createObjectURL(file),
+      });
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
+
+      let avatarUrl = formData.avatarUrl;
+      if (formData.avatarFile) {
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(`${user.id}/${formData.avatarFile.name}`, formData.avatarFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(uploadData.path);
+
+        avatarUrl = publicUrl;
+      }
+
+      const { error: updateError } = await supabase
+        .from("profiles")
         .update({
           username: formData.username,
           age: parseInt(formData.age),
-          avatar_url: formData.avatar_url || undefined
+          avatar_url: avatarUrl,
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', (await supabase.auth.getUser()).data.user?.id)
+        .eq("id", user.id);
 
-      if (!error) {
-        navigate('/')
-      }
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Success!",
+        description: "Your profile has been created.",
+      });
+      navigate("/");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
     }
-  }
+  };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    const fileExt = file.name.split('.').pop()
-    const filePath = `${Math.random()}.${fileExt}`
-
-    const { error: uploadError, data } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, file)
-
-    if (uploadError) {
-      console.error('Error uploading file:', uploadError)
-      return
+  const renderStep = () => {
+    switch (step) {
+      case 1:
+        return (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-white">Choose your username</h2>
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                placeholder="Enter your username"
+              />
+            </div>
+          </div>
+        );
+      case 2:
+        return (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-white">How old are you?</h2>
+            <div className="space-y-2">
+              <Label htmlFor="age">Age</Label>
+              <Input
+                id="age"
+                type="number"
+                value={formData.age}
+                onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                placeholder="Enter your age"
+              />
+            </div>
+          </div>
+        );
+      case 3:
+        return (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-white">Add a profile picture</h2>
+            <div className="flex flex-col items-center gap-4">
+              <Avatar className="w-32 h-32">
+                <AvatarImage src={formData.avatarUrl} />
+              </Avatar>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="avatar-upload"
+                />
+                <Label
+                  htmlFor="avatar-upload"
+                  className="flex items-center gap-2 cursor-pointer bg-primary text-white px-4 py-2 rounded-md"
+                >
+                  <Upload size={20} />
+                  Choose Image
+                </Label>
+              </div>
+            </div>
+          </div>
+        );
+      default:
+        return null;
     }
-
-    if (data) {
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath)
-      
-      setFormData(prev => ({
-        ...prev,
-        avatar_url: publicUrl
-      }))
-    }
-  }
-
-  const currentStepData = steps[currentStep]
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-lg p-8 space-y-8">
-        <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold">{currentStepData.title}</h1>
-          <p className="text-muted-foreground">{currentStepData.description}</p>
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="w-full max-w-md p-6 space-y-8">
+        <div className="w-full bg-secondary rounded-full h-2 mb-8">
+          <div
+            className="bg-primary h-2 rounded-full transition-all duration-300"
+            style={{ width: `${(step / 3) * 100}%` }}
+          />
         </div>
 
-        <div className="space-y-4">
-          {currentStepData.field === "avatar_url" ? (
-            <div className="space-y-2">
-              <Label htmlFor="avatar">Profile Picture</Label>
-              <Input
-                id="avatar"
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="cursor-pointer"
-              />
-              {formData.avatar_url && (
-                <img 
-                  src={formData.avatar_url} 
-                  alt="Preview" 
-                  className="w-32 h-32 object-cover rounded-full mx-auto mt-4"
-                />
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Label htmlFor={currentStepData.field}>{currentStepData.title}</Label>
-              <Input
-                id={currentStepData.field}
-                type={currentStepData.field === "age" ? "number" : "text"}
-                value={formData[currentStepData.field]}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  [currentStepData.field]: e.target.value
-                }))}
-                placeholder={`Enter your ${currentStepData.field}`}
-              />
-            </div>
-          )}
-        </div>
+        {renderStep()}
 
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between pt-4">
           <Button
-            variant="outline"
-            onClick={() => currentStep > 0 && setCurrentStep(prev => prev - 1)}
-            disabled={currentStep === 0}
+            variant="ghost"
+            onClick={() => setStep(step - 1)}
+            disabled={step === 1}
+            className="flex items-center gap-2"
           >
+            <ChevronLeft size={20} />
             Back
           </Button>
-          <div className="text-sm text-muted-foreground">
-            Step {currentStep + 1} of {steps.length}
-          </div>
-          <Button onClick={handleNext}>
-            {currentStep === steps.length - 1 ? "Finish" : "Next"}
-          </Button>
+          {step < 3 ? (
+            <Button
+              onClick={() => setStep(step + 1)}
+              disabled={
+                (step === 1 && !formData.username) ||
+                (step === 2 && !formData.age)
+              }
+              className="flex items-center gap-2"
+            >
+              Next
+              <ChevronRight size={20} />
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSubmit}
+              disabled={!formData.username || !formData.age}
+              className="flex items-center gap-2"
+            >
+              Complete
+              <ChevronRight size={20} />
+            </Button>
+          )}
         </div>
-      </Card>
+      </div>
     </div>
-  )
-}
+  );
+};
+
+export default Register;
