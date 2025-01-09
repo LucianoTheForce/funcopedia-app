@@ -1,8 +1,11 @@
 import { Eye, Star } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 
 const Index = () => {
+  const navigate = useNavigate();
+  
   const freshFaces = [
     { id: 1, name: "Sofia", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sofia" },
     { id: 2, name: "Lucas", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas" },
@@ -27,6 +30,10 @@ const Index = () => {
     { id: 12, name: "Diego", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Diego", online: true },
   ];
 
+  const handleUserClick = (userId: number) => {
+    navigate(`/chat/${userId}`);
+  };
+
   return (
     <div className="min-h-screen bg-black pb-20">
       <header className="p-4 flex justify-between items-center">
@@ -42,7 +49,11 @@ const Index = () => {
           <h2 className="text-2xl font-bold text-white mb-4">Fresh Faces</h2>
           <div className="flex gap-4 overflow-x-auto pb-4">
             {freshFaces.map((user) => (
-              <div key={user.id} className="flex flex-col items-center">
+              <div 
+                key={user.id} 
+                className="flex flex-col items-center cursor-pointer"
+                onClick={() => handleUserClick(user.id)}
+              >
                 <Avatar className="w-16 h-16">
                   <AvatarImage src={user.image} alt={user.name} className="object-cover" />
                 </Avatar>
@@ -56,7 +67,11 @@ const Index = () => {
           <h2 className="text-2xl font-bold text-white mb-4">Who's Nearby</h2>
           <div className="grid grid-cols-3 gap-3">
             {nearbyUsers.map((user) => (
-              <div key={user.id} className="relative aspect-[3/4] rounded-xl overflow-hidden">
+              <div 
+                key={user.id} 
+                className="relative aspect-[3/4] rounded-xl overflow-hidden cursor-pointer"
+                onClick={() => handleUserClick(user.id)}
+              >
                 <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
                 <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
                   <div className="flex items-center gap-1">
@@ -64,7 +79,13 @@ const Index = () => {
                     <span className="text-white text-sm">{user.name}</span>
                   </div>
                 </div>
-                <button className="absolute top-2 right-2 p-1.5 rounded-full bg-white/10 backdrop-blur-sm">
+                <button 
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-white/10 backdrop-blur-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Add favorite logic here
+                  }}
+                >
                   <Star size={16} className="text-white" />
                 </button>
               </div>
