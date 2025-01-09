@@ -13,7 +13,7 @@ export const MessageInput = ({ onSend, isLoading }: MessageInputProps) => {
 
   const handleSend = () => {
     if (newMessage.trim()) {
-      onSend(newMessage);
+      onSend(newMessage.trim());
       setNewMessage("");
     }
   };
@@ -39,7 +39,7 @@ export const MessageInput = ({ onSend, isLoading }: MessageInputProps) => {
           className="flex-1 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyPress}
           disabled={isLoading}
         />
         <Button

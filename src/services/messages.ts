@@ -29,13 +29,18 @@ export const sendUserMessage = async (
     throw new Error("Invalid user ID format");
   }
 
-  const { error } = await supabase.from("messages").insert({
-    content: content.trim(),
-    sender_id: currentUserId,
-    receiver_id: userId,
-  });
+  const { error } = await supabase
+    .from("messages")
+    .insert({
+      content: content.trim(),
+      sender_id: currentUserId,
+      receiver_id: userId,
+    });
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error sending message:", error);
+    throw error;
+  }
 };
 
 export const setupMessageSubscription = (

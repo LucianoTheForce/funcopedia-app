@@ -51,8 +51,9 @@ export const useMessages = (userId: string | undefined) => {
   const sendMessage = async (content: string) => {
     if (!content.trim() || !userId) return;
 
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
+      
       const { data: sessionData } = await supabase.auth.getSession();
       const currentUserId = sessionData.session?.user.id;
       
@@ -61,6 +62,21 @@ export const useMessages = (userId: string | undefined) => {
       }
 
       await sendUserMessage(currentUserId, userId, content);
+      
+      // Add the message to the local state immediately for better UX
+      const newMessage: Message = {
+        id: crypto.randomUUID(),
+        content: content.trim(),
+        sender_id: currentUserId,
+        receiver_id: userId,
+        created_at: new Date().toISOString(),
+      };
+
+      setState((prev) => ({
+        ...prev,
+        messages: [...prev.messages, newMessage],
+        isLoading: false,
+      }));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to send message";
       setState((prev) => ({
@@ -73,8 +89,6 @@ export const useMessages = (userId: string | undefined) => {
         title: "Error",
         description: message,
       });
-    } finally {
-      setState((prev) => ({ ...prev, isLoading: false }));
     }
   };
 
