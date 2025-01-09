@@ -4,6 +4,15 @@ export interface Message {
   sender_id: string;
   receiver_id: string;
   created_at: string;
+  updated_at: string;
+  sender: {
+    username: string | null;
+    avatar_url: string | null;
+  } | null;
+  receiver: {
+    username: string | null;
+    avatar_url: string | null;
+  } | null;
 }
 
 export interface MessagesState {

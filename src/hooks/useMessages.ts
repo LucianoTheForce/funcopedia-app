@@ -68,7 +68,7 @@ export const useMessages = (receiverId: string | null) => {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         sender: null,
-        receiver: null,
+        receiver: null
       };
 
       setMessages((prev) => [...prev, optimisticMessage]);
