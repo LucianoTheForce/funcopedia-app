@@ -1,60 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { RealtimeChannel } from "@supabase/supabase-js";
-
-export interface Message {
-  id: string;
-  content: string;
-  sender_id: string;
-  receiver_id: string;
-  created_at: string;
-}
-
-interface MessagesState {
-  messages: Message[];
-  isLoading: boolean;
-  error: string | null;
-}
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-const validateUUIDs = (currentUserId: string, userId: string): boolean => {
-  return UUID_REGEX.test(currentUserId) && UUID_REGEX.test(userId);
-};
-
-const buildMessagesQuery = (currentUserId: string, userId: string) => {
-  return supabase
-    .from("messages")
-    .select("*")
-    .or(
-      `and(sender_id.eq.${currentUserId},receiver_id.eq.${userId}),` +
-      `and(sender_id.eq.${userId},receiver_id.eq.${currentUserId})`
-    )
-    .order("created_at", { ascending: true });
-};
-
-const setupMessageSubscription = (
-  currentUserId: string,
-  userId: string,
-  onNewMessage: (message: Message) => void
-): RealtimeChannel => {
-  return supabase
-    .channel("messages")
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "messages",
-        filter: `sender_id=eq.${userId},receiver_id=eq.${currentUserId}`,
-      },
-      (payload) => {
-        onNewMessage(payload.new as Message);
-      }
-    )
-    .subscribe();
-};
+import { Message, MessagesState } from "@/types/messages";
+import { 
+  fetchUserMessages, 
+  sendUserMessage, 
+  setupMessageSubscription 
+} from "@/services/messages";
 
 export const useMessages = (userId: string | undefined) => {
   const [state, setState] = useState<MessagesState>({
@@ -73,18 +25,12 @@ export const useMessages = (userId: string | undefined) => {
         throw new Error("Authentication required");
       }
 
-      if (!validateUUIDs(currentUserId, userId)) {
-        throw new Error("Invalid user ID format");
-      }
-
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
-      const { data, error } = await buildMessagesQuery(currentUserId, userId);
-
-      if (error) throw error;
-
+      const messages = await fetchUserMessages(currentUserId, userId);
+      
       setState((prev) => ({
         ...prev,
-        messages: data || [],
+        messages,
         isLoading: false,
       }));
     } catch (error) {
@@ -114,17 +60,7 @@ export const useMessages = (userId: string | undefined) => {
         throw new Error("You must be logged in to send messages");
       }
 
-      if (!validateUUIDs(currentUserId, userId)) {
-        throw new Error("Invalid user ID format");
-      }
-
-      const { error } = await supabase.from("messages").insert({
-        content: content.trim(),
-        sender_id: currentUserId,
-        receiver_id: userId,
-      });
-
-      if (error) throw error;
+      await sendUserMessage(currentUserId, userId, content);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to send message";
       setState((prev) => ({
@@ -154,14 +90,17 @@ export const useMessages = (userId: string | undefined) => {
       const currentUserId = sessionData.session?.user.id;
       
       if (!currentUserId || !userId) return;
-      if (!validateUUIDs(currentUserId, userId)) return;
 
-      const channel = setupMessageSubscription(currentUserId, userId, (newMessage) => {
-        setState((prev) => ({
-          ...prev,
-          messages: [...prev.messages, newMessage],
-        }));
-      });
+      const channel = setupMessageSubscription(
+        currentUserId, 
+        userId, 
+        (newMessage) => {
+          setState((prev) => ({
+            ...prev,
+            messages: [...prev.messages, newMessage],
+          }));
+        }
+      );
 
       return () => {
         supabase.removeChannel(channel);
