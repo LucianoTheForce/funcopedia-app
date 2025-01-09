@@ -1,44 +1,37 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from "@/types/messages";
-import { validateUUIDs } from "@/utils/validation";
 
-export const fetchUserMessages = async (currentUserId: string, userId: string) => {
-  if (!validateUUIDs(currentUserId, userId)) {
-    throw new Error("Invalid user ID format");
-  }
-
+export const fetchUserMessages = async (currentUserId: string, userId: string): Promise<Message[]> => {
   const { data, error } = await supabase
-    .from("messages")
-    .select("*")
-    .or(
-      `and(sender_id.eq.${currentUserId},receiver_id.eq.${userId}),` +
-      `and(sender_id.eq.${userId},receiver_id.eq.${currentUserId})`
-    )
-    .order("created_at", { ascending: true });
-
-  if (error) throw error;
-  return data as Message[];
-};
-
-export const sendUserMessage = async (
-  currentUserId: string, 
-  userId: string, 
-  content: string
-) => {
-  if (!validateUUIDs(currentUserId, userId)) {
-    throw new Error("Invalid user ID format");
-  }
-
-  const { error } = await supabase
-    .from("messages")
-    .insert({
-      content: content.trim(),
-      sender_id: currentUserId,
-      receiver_id: userId,
-    });
+    .from('messages')
+    .select(`
+      *,
+      sender:profiles!messages_sender_profile_fkey(username, avatar_url),
+      receiver:profiles!messages_receiver_profile_fkey(username, avatar_url)
+    `)
+    .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
+    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+    .order('created_at', { ascending: true });
 
   if (error) {
-    console.error("Error sending message:", error);
+    throw error;
+  }
+
+  return data || [];
+};
+
+export const sendUserMessage = async (senderId: string, receiverId: string, content: string) => {
+  const { error } = await supabase
+    .from('messages')
+    .insert([
+      {
+        sender_id: senderId,
+        receiver_id: receiverId,
+        content,
+      },
+    ]);
+
+  if (error) {
     throw error;
   }
 };
