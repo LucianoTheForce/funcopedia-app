@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
+import { calculateDistance, formatDistance } from "@/utils/distance";
 
 type Profile = Tables<"profiles">;
 
@@ -145,6 +146,16 @@ const Index = () => {
                 <span className={`text-sm mt-2 ${getUserTextColor(user.is_fake)}`}>
                   {user.username}
                 </span>
+                {currentUser && (
+                  <span className="text-xs text-gray-400">
+                    {formatDistance(calculateDistance(
+                      currentUser.latitude,
+                      currentUser.longitude,
+                      user.latitude,
+                      user.longitude
+                    ))}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -165,11 +176,23 @@ const Index = () => {
                   className={`w-full h-full object-cover ${user.is_fake ? 'grayscale' : ''}`} 
                 />
                 <div className={`absolute bottom-0 left-0 right-0 p-2 ${getUserBackgroundColor(user.is_fake)}`}>
-                  <div className="flex items-center gap-1">
-                    <div className={`w-2 h-2 rounded-full ${user.online ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                    <span className="text-white text-sm">
-                      {user.id === currentUser?.id ? `${user.username} (You)` : user.username}
-                    </span>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${user.online ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                      <span className="text-white text-sm">
+                        {user.id === currentUser?.id ? `${user.username} (You)` : user.username}
+                      </span>
+                    </div>
+                    {currentUser && user.id !== currentUser.id && (
+                      <span className="text-xs text-white/80">
+                        {formatDistance(calculateDistance(
+                          currentUser.latitude,
+                          currentUser.longitude,
+                          user.latitude,
+                          user.longitude
+                        ))}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <button 
