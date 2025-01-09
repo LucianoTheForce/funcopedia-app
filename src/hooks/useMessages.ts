@@ -31,8 +31,8 @@ export const useMessages = (receiverId: string | null) => {
 
     fetchMessages();
 
-    // Set up realtime subscription
-    const subscription = supabase
+    // Set up realtime subscription for both sent and received messages
+    const channel = supabase
       .channel('messages')
       .on(
         'postgres_changes',
@@ -40,17 +40,24 @@ export const useMessages = (receiverId: string | null) => {
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `sender_id=eq.${receiverId}`,
         },
-        (payload) => {
+        async (payload) => {
           const newMessage = payload.new as Message;
-          setMessages((prev) => [...prev, newMessage]);
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          // Only add message if it's part of this conversation
+          if (user && (
+            (newMessage.sender_id === user.id && newMessage.receiver_id === receiverId) ||
+            (newMessage.sender_id === receiverId && newMessage.receiver_id === user.id)
+          )) {
+            setMessages((prev) => [...prev, newMessage]);
+          }
         }
       )
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, [receiverId, toast]);
 
