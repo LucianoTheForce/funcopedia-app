@@ -15,7 +15,9 @@ export const useMessages = (receiverId: string | null) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || !receiverId) return;
 
+        console.log('Fetching messages for conversation between:', user.id, 'and', receiverId);
         const fetchedMessages = await fetchUserMessages(user.id, receiverId);
+        console.log('Fetched messages:', fetchedMessages);
         setMessages(fetchedMessages);
       } catch (error) {
         console.error('Error fetching messages:', error);
@@ -31,7 +33,7 @@ export const useMessages = (receiverId: string | null) => {
 
     fetchMessages();
 
-    // Set up realtime subscription for both sent and received messages
+    // Set up realtime subscription for messages
     const channel = supabase
       .channel('messages')
       .on(
@@ -42,21 +44,33 @@ export const useMessages = (receiverId: string | null) => {
           table: 'messages',
         },
         async (payload) => {
+          console.log('Received new message:', payload);
           const newMessage = payload.new as Message;
           const { data: { user } } = await supabase.auth.getUser();
           
+          if (!user) return;
+          
           // Only add message if it's part of this conversation
-          if (user && (
+          const isPartOfConversation = 
             (newMessage.sender_id === user.id && newMessage.receiver_id === receiverId) ||
-            (newMessage.sender_id === receiverId && newMessage.receiver_id === user.id)
-          )) {
-            setMessages((prev) => [...prev, newMessage]);
+            (newMessage.sender_id === receiverId && newMessage.receiver_id === user.id);
+
+          console.log('Is part of conversation:', isPartOfConversation, {
+            currentUserId: user.id,
+            receiverId,
+            senderId: newMessage.sender_id,
+            messageReceiverId: newMessage.receiver_id
+          });
+
+          if (isPartOfConversation) {
+            setMessages(prev => [...prev, newMessage]);
           }
         }
       )
       .subscribe();
 
     return () => {
+      console.log('Cleaning up subscription');
       supabase.removeChannel(channel);
     };
   }, [receiverId, toast]);
@@ -65,6 +79,12 @@ export const useMessages = (receiverId: string | null) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !receiverId) return;
+
+      console.log('Sending message:', {
+        senderId: user.id,
+        receiverId,
+        content
+      });
 
       // Optimistic update
       const optimisticMessage: Message = {
@@ -78,7 +98,7 @@ export const useMessages = (receiverId: string | null) => {
         receiver: null
       };
 
-      setMessages((prev) => [...prev, optimisticMessage]);
+      setMessages(prev => [...prev, optimisticMessage]);
 
       await sendUserMessage(user.id, receiverId, content);
     } catch (error) {

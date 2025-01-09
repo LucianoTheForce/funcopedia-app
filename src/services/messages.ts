@@ -3,8 +3,11 @@ import { Message } from "@/types/messages";
 
 export const fetchUserMessages = async (currentUserId: string, userId: string): Promise<Message[]> => {
   if (!currentUserId || !userId) {
+    console.log('Missing required IDs:', { currentUserId, userId });
     return [];
   }
+
+  console.log('Fetching messages for:', { currentUserId, userId });
 
   const { data, error } = await supabase
     .from('messages')
@@ -24,13 +27,17 @@ export const fetchUserMessages = async (currentUserId: string, userId: string): 
     throw error;
   }
 
+  console.log('Fetched messages:', data);
   return data || [];
 };
 
 export const sendUserMessage = async (senderId: string, receiverId: string, content: string) => {
   if (!senderId || !receiverId || !content.trim()) {
+    console.error('Missing required parameters:', { senderId, receiverId, content });
     throw new Error("Missing required parameters");
   }
+
+  console.log('Sending message:', { senderId, receiverId, content });
 
   const { error } = await supabase
     .from('messages')
