@@ -9,9 +9,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const Chat = () => {
-  const { id } = useParams();
+  const { id: username } = useParams();
   const navigate = useNavigate();
-  const { messages, isLoading, sendMessage } = useMessages(id);
+  const [userId, setUserId] = useState<string | null>(null);
+  const { messages, isLoading, sendMessage } = useMessages(userId);
   const [receiverProfile, setReceiverProfile] = useState<{ username: string; avatar_url: string } | null>(null);
 
   useEffect(() => {
@@ -27,13 +28,13 @@ const Chat = () => {
 
   useEffect(() => {
     const fetchReceiverProfile = async () => {
-      if (!id) return;
+      if (!username) return;
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('username, avatar_url')
-        .eq('id', id)
-        .single();
+        .select('id, username, avatar_url')
+        .eq('username', username)
+        .maybeSingle();
         
       if (error) {
         console.error('Error fetching receiver profile:', error);
@@ -41,14 +42,18 @@ const Chat = () => {
       }
       
       if (data) {
-        setReceiverProfile(data);
+        setUserId(data.id);
+        setReceiverProfile({
+          username: data.username || username,
+          avatar_url: data.avatar_url
+        });
       }
     };
 
     fetchReceiverProfile();
-  }, [id]);
+  }, [username]);
 
-  if (!id) {
+  if (!username) {
     return null;
   }
 
@@ -65,16 +70,16 @@ const Chat = () => {
         </Button>
         <Avatar className="w-10 h-10">
           <AvatarImage
-            src={receiverProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`}
+            src={receiverProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`}
           />
         </Avatar>
         <div className="flex-1">
-          <h1 className="text-white font-semibold">{receiverProfile?.username || 'Chat'}</h1>
+          <h1 className="text-white font-semibold">{receiverProfile?.username || username}</h1>
           <p className="text-sm text-gray-400">Online</p>
         </div>
       </div>
 
-      <MessageList messages={messages} userId={id} />
+      <MessageList messages={messages} userId={userId || ''} />
       <MessageInput onSend={sendMessage} isLoading={isLoading} />
     </div>
   );

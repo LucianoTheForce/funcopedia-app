@@ -2,6 +2,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Message } from "@/types/messages";
 
 export const fetchUserMessages = async (currentUserId: string, userId: string): Promise<Message[]> => {
+  if (!currentUserId || !userId) {
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('messages')
     .select(`
@@ -9,8 +13,10 @@ export const fetchUserMessages = async (currentUserId: string, userId: string): 
       sender:profiles!messages_sender_profile_fkey(username, avatar_url),
       receiver:profiles!messages_receiver_profile_fkey(username, avatar_url)
     `)
-    .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
-    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+    .or(
+      `and(sender_id.eq.${currentUserId},receiver_id.eq.${userId}),` +
+      `and(sender_id.eq.${userId},receiver_id.eq.${currentUserId})`
+    )
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -21,13 +27,17 @@ export const fetchUserMessages = async (currentUserId: string, userId: string): 
 };
 
 export const sendUserMessage = async (senderId: string, receiverId: string, content: string) => {
+  if (!senderId || !receiverId || !content.trim()) {
+    throw new Error("Missing required parameters");
+  }
+
   const { error } = await supabase
     .from('messages')
     .insert([
       {
         sender_id: senderId,
         receiver_id: receiverId,
-        content,
+        content: content.trim(),
       },
     ]);
 
