@@ -42,25 +42,3 @@ export const sendUserMessage = async (
     throw error;
   }
 };
-
-export const setupMessageSubscription = (
-  currentUserId: string,
-  userId: string,
-  onNewMessage: (message: Message) => void
-) => {
-  return supabase
-    .channel("messages")
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "messages",
-        filter: `sender_id=eq.${userId},receiver_id=eq.${currentUserId}`,
-      },
-      (payload) => {
-        onNewMessage(payload.new as Message);
-      }
-    )
-    .subscribe();
-};

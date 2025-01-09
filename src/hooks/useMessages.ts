@@ -63,7 +63,7 @@ export const useMessages = (userId: string | undefined) => {
 
       await sendUserMessage(currentUserId, userId, content);
       
-      // Add the message to the local state immediately for better UX
+      // Add optimistic update
       const newMessage: Message = {
         id: crypto.randomUUID(),
         content: content.trim(),
@@ -105,16 +105,27 @@ export const useMessages = (userId: string | undefined) => {
       
       if (!currentUserId || !userId) return;
 
-      const channel = setupMessageSubscription(
-        currentUserId, 
-        userId, 
-        (newMessage) => {
-          setState((prev) => ({
-            ...prev,
-            messages: [...prev.messages, newMessage],
-          }));
-        }
-      );
+      const channel = supabase
+        .channel('messages')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `receiver_id=eq.${currentUserId}`,
+          },
+          (payload) => {
+            const newMessage = payload.new as Message;
+            if (newMessage.sender_id === userId) {
+              setState((prev) => ({
+                ...prev,
+                messages: [...prev.messages, newMessage],
+              }));
+            }
+          }
+        )
+        .subscribe();
 
       return () => {
         supabase.removeChannel(channel);
