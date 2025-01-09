@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, ArrowRight, Upload } from "lucide-react";
+import { ProgressIndicator } from "@/components/register/ProgressIndicator";
+import { UsernameStep } from "@/components/register/UsernameStep";
+import { AgeStep } from "@/components/register/AgeStep";
+import { AvatarStep } from "@/components/register/AvatarStep";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -82,96 +84,32 @@ const Register = () => {
   const renderStep = () => {
     switch (step) {
       case 1:
-        return (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-white">Choose your username</h2>
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
-          </div>
-        );
+        return <UsernameStep username={username} onChange={setUsername} />;
       case 2:
-        return (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-white">How old are you?</h2>
-            <div className="space-y-2">
-              <Label htmlFor="age">Age</Label>
-              <Input
-                id="age"
-                type="number"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                placeholder="Enter your age"
-                className="bg-gray-800 border-gray-700 text-white"
-                min="18"
-                max="100"
-              />
-            </div>
-          </div>
-        );
+        return <AgeStep age={age} onChange={setAge} />;
       case 3:
-        return (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-white">Add a profile picture</h2>
-            <div className="space-y-2">
-              <Label htmlFor="avatar">Profile Picture</Label>
-              <div className="flex items-center gap-4">
-                <Input
-                  id="avatar"
-                  type="file"
-                  onChange={handleFileChange}
-                  className="bg-gray-800 border-gray-700 text-white"
-                  accept="image/*"
-                />
-                {avatar && (
-                  <img
-                    src={URL.createObjectURL(avatar)}
-                    alt="Preview"
-                    className="w-16 h-16 rounded-full object-cover"
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-        );
+        return <AvatarStep onFileChange={handleFileChange} avatar={avatar} />;
       default:
         return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="flex justify-between items-center">
-          <div className="space-y-1">
-            <p className="text-sm text-gray-400">Step {step} of 3</p>
-            <div className="w-full bg-gray-700 h-2 rounded-full">
-              <div
-                className="bg-primary h-2 rounded-full transition-all"
-                style={{ width: `${(step / 3) * 100}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-900 p-6 rounded-lg shadow-xl">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="w-full max-w-md space-y-8 animate-fade-in">
+        <ProgressIndicator currentStep={step} totalSteps={3} />
+        
+        <div className="bg-card p-6 rounded-lg shadow-lg border border-border/50 backdrop-blur supports-[backdrop-filter]:bg-card/80">
           {renderStep()}
 
-          <div className="flex justify-between mt-8">
+          <div className="flex justify-between mt-8 gap-4">
             {step > 1 && (
               <Button
                 onClick={() => setStep(step - 1)}
                 variant="outline"
-                className="flex items-center gap-2"
+                className="flex-1"
               >
-                <ArrowLeft size={16} />
+                <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
             )}
@@ -179,23 +117,23 @@ const Register = () => {
             {step < 3 ? (
               <Button
                 onClick={() => setStep(step + 1)}
-                className="flex items-center gap-2 ml-auto"
+                className="flex-1"
                 disabled={
                   (step === 1 && !username) ||
                   (step === 2 && !age)
                 }
               >
                 Next
-                <ArrowRight size={16} />
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
               <Button
                 onClick={handleSubmit}
-                className="flex items-center gap-2 ml-auto"
+                className="flex-1"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Creating Profile..." : "Complete Registration"}
-                <Upload size={16} />
+                <Upload className="ml-2 h-4 w-4" />
               </Button>
             )}
           </div>
