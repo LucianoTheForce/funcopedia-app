@@ -1,64 +1,64 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Avatar, AvatarImage } from "@/components/ui/avatar";
-import { ChevronLeft, ChevronRight, Upload } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { ArrowLeft, ArrowRight, Upload } from "lucide-react";
 
 const Register = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    username: "",
-    age: "",
-    avatarUrl: "",
-    avatarFile: null as File | null,
-  });
+  const [username, setUsername] = useState("");
+  const [age, setAge] = useState("");
+  const [avatar, setAvatar] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData({
-        ...formData,
-        avatarFile: file,
-        avatarUrl: URL.createObjectURL(file),
-      });
+    if (e.target.files && e.target.files[0]) {
+      setAvatar(e.target.files[0]);
     }
   };
 
   const handleSubmit = async () => {
     try {
+      setIsSubmitting(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user found");
+      
+      if (!user) {
+        navigate('/auth');
+        return;
+      }
 
-      let avatarUrl = formData.avatarUrl;
-      if (formData.avatarFile) {
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("avatars")
-          .upload(`${user.id}/${formData.avatarFile.name}`, formData.avatarFile);
+      let avatarUrl = null;
+      if (avatar) {
+        const fileExt = avatar.name.split('.').pop();
+        const filePath = `${user.id}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, avatar, { upsert: true });
 
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
-          .from("avatars")
-          .getPublicUrl(uploadData.path);
+          .from('avatars')
+          .getPublicUrl(filePath);
 
         avatarUrl = publicUrl;
       }
 
       const { error: updateError } = await supabase
-        .from("profiles")
+        .from('profiles')
         .update({
-          username: formData.username,
-          age: parseInt(formData.age),
+          username,
+          age: parseInt(age),
           avatar_url: avatarUrl,
-          updated_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
-        .eq("id", user.id);
+        .eq('id', user.id);
 
       if (updateError) throw updateError;
 
@@ -66,13 +66,16 @@ const Register = () => {
         title: "Success!",
         description: "Your profile has been created.",
       });
-      navigate("/");
+
+      navigate('/');
     } catch (error: any) {
       toast({
-        variant: "destructive",
         title: "Error",
         description: error.message,
+        variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -86,9 +89,10 @@ const Register = () => {
               <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter your username"
+                className="bg-gray-800 border-gray-700 text-white"
               />
             </div>
           </div>
@@ -102,9 +106,12 @@ const Register = () => {
               <Input
                 id="age"
                 type="number"
-                value={formData.age}
-                onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
                 placeholder="Enter your age"
+                className="bg-gray-800 border-gray-700 text-white"
+                min="18"
+                max="100"
               />
             </div>
           </div>
@@ -113,25 +120,23 @@ const Register = () => {
         return (
           <div className="space-y-4">
             <h2 className="text-2xl font-bold text-white">Add a profile picture</h2>
-            <div className="flex flex-col items-center gap-4">
-              <Avatar className="w-32 h-32">
-                <AvatarImage src={formData.avatarUrl} />
-              </Avatar>
-              <div className="flex items-center gap-2">
+            <div className="space-y-2">
+              <Label htmlFor="avatar">Profile Picture</Label>
+              <div className="flex items-center gap-4">
                 <Input
+                  id="avatar"
                   type="file"
-                  accept="image/*"
                   onChange={handleFileChange}
-                  className="hidden"
-                  id="avatar-upload"
+                  className="bg-gray-800 border-gray-700 text-white"
+                  accept="image/*"
                 />
-                <Label
-                  htmlFor="avatar-upload"
-                  className="flex items-center gap-2 cursor-pointer bg-primary text-white px-4 py-2 rounded-md"
-                >
-                  <Upload size={20} />
-                  Choose Image
-                </Label>
+                {avatar && (
+                  <img
+                    src={URL.createObjectURL(avatar)}
+                    alt="Preview"
+                    className="w-16 h-16 rounded-full object-cover"
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -142,49 +147,58 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="w-full max-w-md p-6 space-y-8">
-        <div className="w-full bg-secondary rounded-full h-2 mb-8">
-          <div
-            className="bg-primary h-2 rounded-full transition-all duration-300"
-            style={{ width: `${(step / 3) * 100}%` }}
-          />
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-8">
+        <div className="flex justify-between items-center">
+          <div className="space-y-1">
+            <p className="text-sm text-gray-400">Step {step} of 3</p>
+            <div className="w-full bg-gray-700 h-2 rounded-full">
+              <div
+                className="bg-primary h-2 rounded-full transition-all"
+                style={{ width: `${(step / 3) * 100}%` }}
+              />
+            </div>
+          </div>
         </div>
 
-        {renderStep()}
+        <div className="bg-gray-900 p-6 rounded-lg shadow-xl">
+          {renderStep()}
 
-        <div className="flex justify-between pt-4">
-          <Button
-            variant="ghost"
-            onClick={() => setStep(step - 1)}
-            disabled={step === 1}
-            className="flex items-center gap-2"
-          >
-            <ChevronLeft size={20} />
-            Back
-          </Button>
-          {step < 3 ? (
-            <Button
-              onClick={() => setStep(step + 1)}
-              disabled={
-                (step === 1 && !formData.username) ||
-                (step === 2 && !formData.age)
-              }
-              className="flex items-center gap-2"
-            >
-              Next
-              <ChevronRight size={20} />
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSubmit}
-              disabled={!formData.username || !formData.age}
-              className="flex items-center gap-2"
-            >
-              Complete
-              <ChevronRight size={20} />
-            </Button>
-          )}
+          <div className="flex justify-between mt-8">
+            {step > 1 && (
+              <Button
+                onClick={() => setStep(step - 1)}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft size={16} />
+                Back
+              </Button>
+            )}
+            
+            {step < 3 ? (
+              <Button
+                onClick={() => setStep(step + 1)}
+                className="flex items-center gap-2 ml-auto"
+                disabled={
+                  (step === 1 && !username) ||
+                  (step === 2 && !age)
+                }
+              >
+                Next
+                <ArrowRight size={16} />
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSubmit}
+                className="flex items-center gap-2 ml-auto"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Creating Profile..." : "Complete Registration"}
+                <Upload size={16} />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
