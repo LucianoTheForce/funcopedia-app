@@ -2,36 +2,56 @@ import { Eye, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Profile {
+  id: string;
+  username: string;
+  avatar_url: string;
+  online: boolean;
+  is_fake: boolean;
+}
 
 const Index = () => {
   const navigate = useNavigate();
+  const [nearbyUsers, setNearbyUsers] = useState<Profile[]>([]);
+  const [freshFaces, setFreshFaces] = useState<Profile[]>([]);
+
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching profiles:', error);
+        return;
+      }
+
+      // Split profiles into fresh faces (newest 6) and nearby users (rest)
+      if (profiles) {
+        setFreshFaces(profiles.slice(0, 6));
+        setNearbyUsers(profiles.slice(6));
+      }
+    };
+
+    fetchProfiles();
+  }, []);
   
-  const freshFaces = [
-    { id: 1, name: "Sofia", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sofia" },
-    { id: 2, name: "Lucas", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas" },
-    { id: 3, name: "Isabella", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Isabella" },
-    { id: 4, name: "Miguel", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Miguel" },
-    { id: 5, name: "Valentina", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Valentina" },
-    { id: 6, name: "João", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Joao" },
-  ];
-
-  const nearbyUsers = [
-    { id: 1, name: "Maria", image: "https://images.unsplash.com/photo-1582562124811-c09040d0a901", online: true },
-    { id: 2, name: "Pedro", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Pedro", online: true },
-    { id: 3, name: "Ana", image: "https://images.unsplash.com/photo-1535268647677-300dbf3d78d1", online: false },
-    { id: 4, name: "Gabriel", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Gabriel", online: true },
-    { id: 5, name: "Julia", image: "https://images.unsplash.com/photo-1452378174528-3090a4bba7b2", online: false },
-    { id: 6, name: "Rafael", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rafael", online: true },
-    { id: 7, name: "Beatriz", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Beatriz", online: true },
-    { id: 8, name: "Thiago", image: "https://images.unsplash.com/photo-1465379944081-7f47de8d74ac", online: false },
-    { id: 9, name: "Laura", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Laura", online: true },
-    { id: 10, name: "Bruno", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bruno", online: true },
-    { id: 11, name: "Carolina", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Carolina", online: false },
-    { id: 12, name: "Diego", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Diego", online: true },
-  ];
-
-  const handleUserClick = (userId: number) => {
+  const handleUserClick = (userId: string) => {
     navigate(`/chat/${userId}`);
+  };
+
+  // Function to determine text color based on user type
+  const getUserTextColor = (isFake: boolean) => {
+    return isFake ? 'text-gray-400' : 'text-white';
+  };
+
+  // Function to determine background color based on user type
+  const getUserBackgroundColor = (isFake: boolean) => {
+    return isFake ? 'bg-gray-700' : 'bg-gradient-to-r from-primary to-orange-400';
   };
 
   return (
@@ -39,7 +59,7 @@ const Index = () => {
       <header className="p-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Eye className="text-white" size={24} />
-          <span className="text-white">146 Viewers</span>
+          <span className="text-white">{nearbyUsers.length + freshFaces.length} Users</span>
           <button className="text-primary ml-2">See All</button>
         </div>
       </header>
@@ -54,10 +74,12 @@ const Index = () => {
                 className="flex flex-col items-center cursor-pointer"
                 onClick={() => handleUserClick(user.id)}
               >
-                <Avatar className="w-16 h-16">
-                  <AvatarImage src={user.image} alt={user.name} className="object-cover" />
+                <Avatar className={`w-16 h-16 ring-2 ${user.is_fake ? 'ring-gray-600' : 'ring-primary'}`}>
+                  <AvatarImage src={user.avatar_url} alt={user.username} className="object-cover" />
                 </Avatar>
-                <span className="text-sm text-gray-400 mt-2">{user.name}</span>
+                <span className={`text-sm mt-2 ${getUserTextColor(user.is_fake)}`}>
+                  {user.username}
+                </span>
               </div>
             ))}
           </div>
@@ -72,11 +94,15 @@ const Index = () => {
                 className="relative aspect-[3/4] rounded-xl overflow-hidden cursor-pointer"
                 onClick={() => handleUserClick(user.id)}
               >
-                <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
-                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
+                <img 
+                  src={user.avatar_url} 
+                  alt={user.username} 
+                  className={`w-full h-full object-cover ${user.is_fake ? 'filter grayscale' : ''}`} 
+                />
+                <div className={`absolute bottom-0 left-0 right-0 p-2 ${getUserBackgroundColor(user.is_fake)}`}>
                   <div className="flex items-center gap-1">
                     <div className={`w-2 h-2 rounded-full ${user.online ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                    <span className="text-white text-sm">{user.name}</span>
+                    <span className="text-white text-sm">{user.username}</span>
                   </div>
                 </div>
                 <button 
